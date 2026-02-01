@@ -6,6 +6,12 @@ export default function ImagePreview({ imageDataUrl, detections, onDownload }) {
   const [selectedBoxes, setSelectedBoxes] = useState(new Set());
   const [highlightedBox, setHighlightedBox] = useState(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
+  const [renderedRect, setRenderedRect] = useState({
+    width: 0,
+    height: 0,
+    offsetX: 0,
+    offsetY: 0,
+  });
   const imageRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -17,6 +23,22 @@ export default function ImagePreview({ imageDataUrl, detections, onDownload }) {
         height: imageRef.current.naturalHeight,
       });
     }
+  }, []);
+
+  const updateRenderedRect = useCallback(() => {
+    if (!imageRef.current || !containerRef.current) {
+      return;
+    }
+
+    const imageRect = imageRef.current.getBoundingClientRect();
+    const containerRect = containerRef.current.getBoundingClientRect();
+
+    setRenderedRect({
+      width: imageRect.width,
+      height: imageRect.height,
+      offsetX: imageRect.left - containerRect.left,
+      offsetY: imageRect.top - containerRect.top,
+    });
   }, []);
 
   // Initialize all boxes as selected when detections change
@@ -31,8 +53,17 @@ export default function ImagePreview({ imageDataUrl, detections, onDownload }) {
   useEffect(() => {
     if (imageRef.current?.complete) {
       updateDimensions();
+      updateRenderedRect();
     }
-  }, [updateDimensions]);
+  }, [updateDimensions, updateRenderedRect]);
+
+  useEffect(() => {
+    updateRenderedRect();
+
+    const handleResize = () => updateRenderedRect();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [updateRenderedRect]);
 
   const toggleBox = (index) => {
     setSelectedBoxes((prev) => {
@@ -68,7 +99,21 @@ export default function ImagePreview({ imageDataUrl, detections, onDownload }) {
   const getBoundingBoxStyle = (detection) => {
     const { x, y, width, height } = detection.bbox;
 
-    // Convert from 0-1000 normalized scale to percentages (divide by 10)
+    if (renderedRect.width > 0 && renderedRect.height > 0) {
+      const left = (x / 1000) * renderedRect.width + renderedRect.offsetX;
+      const top = (y / 1000) * renderedRect.height + renderedRect.offsetY;
+      const boxWidth = (width / 1000) * renderedRect.width;
+      const boxHeight = (height / 1000) * renderedRect.height;
+
+      return {
+        left: `${left}px`,
+        top: `${top}px`,
+        width: `${boxWidth}px`,
+        height: `${boxHeight}px`,
+      };
+    }
+
+    // Fallback to percentage positioning if rendered rect isn't ready yet
     return {
       left: `${x / 10}%`,
       top: `${y / 10}%`,
@@ -133,7 +178,10 @@ export default function ImagePreview({ imageDataUrl, detections, onDownload }) {
           src={imageDataUrl}
           alt="Preview"
           className="w-full h-auto"
-          onLoad={updateDimensions}
+          onLoad={() => {
+            updateDimensions();
+            updateRenderedRect();
+          }}
         />
 
         {/* Bounding Boxes Overlay */}

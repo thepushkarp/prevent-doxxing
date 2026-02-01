@@ -156,13 +156,13 @@ public/                     # Static assets
 - JSON: `{detections: [{type, text, bbox, confidence}]}`
 
 **4. Coordinate System** ⚠️ CRITICAL:
-- GPT returns **normalized 0–1000 coordinates** (not pixels)
-- Preview converts normalized coords → CSS percent by dividing by 10
+- GPT outputs are normalized to a **0–1000** coordinate system
+- Preview uses the **rendered image rect** (offsets + size) for overlay positioning
 - Redaction converts normalized coords → pixels using canvas dimensions
 
 **5. Redaction**:
 - Canvas size = original image size (`img.width`, `img.height`)
-- Convert normalized bbox → pixels, then draw black rectangles
+- Draw black rectangles after converting normalized coords to pixels
 - Export as blob (PNG for transparency, JPEG for photos)
 
 ### Sensitive Information Types
@@ -192,9 +192,9 @@ public/                     # Static assets
 - **Parameters**: `max_output_tokens`, `store: false` for privacy
 
 **2. Coordinate System Gotcha** ⚠️
-- GPT returns **normalized 0–1000 coordinates**
-- CSS positioning: convert normalized → percent (`/ 10`)
-- Canvas redaction: convert normalized → pixels using canvas size
+- GPT outputs can vary, so detections are normalized to **0–1000**
+- Preview positions overlays using the **rendered image rect** (handles letterboxing)
+- Canvas redaction converts normalized coords → pixels
 
 **3. Client-Side Architecture Benefits**
 - Privacy: No server ever sees user's API key or images

@@ -1,6 +1,11 @@
 "use client";
 
-import { compressImage, getImageDimensions, needsCompression } from "@/lib/imageCompressor";
+import {
+  compressImage,
+  getDataUrlDimensions,
+  getImageDimensions,
+  needsCompression,
+} from "@/lib/imageCompressor";
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 
@@ -18,17 +23,20 @@ export default function UploadZone({ onImageProcessed }) {
 
       try {
         // Get image dimensions
-        const dimensions = await getImageDimensions(file);
+        const originalDimensions = await getImageDimensions(file);
 
         // Check if compression is needed
         const compressionCheck = await needsCompression(file);
 
         let processedDataUrl;
+        let processedDimensions = originalDimensions;
         let finalSize = file.size;
 
         if (compressionCheck.needed) {
           // Compress the image
-          processedDataUrl = await compressImage(file);
+          const compressed = await compressImage(file);
+          processedDataUrl = compressed.dataUrl;
+          processedDimensions = { width: compressed.width, height: compressed.height };
           // Estimate compressed size from data URL length
           finalSize = Math.round((processedDataUrl.length * 3) / 4);
         } else {
@@ -39,6 +47,7 @@ export default function UploadZone({ onImageProcessed }) {
             reader.onerror = reject;
             reader.readAsDataURL(file);
           });
+          processedDimensions = await getDataUrlDimensions(processedDataUrl);
         }
 
         // Set file info
@@ -46,8 +55,10 @@ export default function UploadZone({ onImageProcessed }) {
           name: file.name,
           originalSize: file.size,
           size: finalSize,
-          width: dimensions.width,
-          height: dimensions.height,
+          width: processedDimensions.width,
+          height: processedDimensions.height,
+          originalWidth: originalDimensions.width,
+          originalHeight: originalDimensions.height,
           wasCompressed: compressionCheck.needed,
         });
 
@@ -62,8 +73,10 @@ export default function UploadZone({ onImageProcessed }) {
             info: {
               name: file.name,
               size: finalSize,
-              width: dimensions.width,
-              height: dimensions.height,
+              width: processedDimensions.width,
+              height: processedDimensions.height,
+              originalWidth: originalDimensions.width,
+              originalHeight: originalDimensions.height,
             },
           });
         }

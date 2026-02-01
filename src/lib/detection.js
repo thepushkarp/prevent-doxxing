@@ -86,15 +86,77 @@ If NO sensitive information is found, return:
   "detections": []
 }`;
 
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const normalizeBBox = (bbox, imageWidth, imageHeight) => {
+  const { x, y, width, height } = bbox;
+  const values = [x, y, width, height];
+  const maxValue = Math.max(...values);
+
+  let mode = "normalized";
+  if (maxValue <= 1) {
+    mode = "fraction";
+  } else if (maxValue > 1000) {
+    mode = "pixels";
+  } else if (imageWidth && imageHeight) {
+    const exceedsImage =
+      x + width > imageWidth * 1.1 ||
+      y + height > imageHeight * 1.1 ||
+      x > imageWidth * 1.1 ||
+      y > imageHeight * 1.1;
+
+    if (!exceedsImage) {
+      const normalizedArea = (width / 1000) * (height / 1000);
+      const pixelArea = (width / imageWidth) * (height / imageHeight);
+
+      if (normalizedArea > 0.6 && pixelArea < 0.6) {
+        mode = "pixels";
+      } else if (imageWidth <= 1200 && imageHeight <= 1200) {
+        mode = "pixels";
+      }
+    }
+  }
+
+  if (mode === "pixels" && (!imageWidth || !imageHeight)) {
+    mode = "normalized";
+  }
+
+  let normX = x;
+  let normY = y;
+  let normWidth = width;
+  let normHeight = height;
+
+  if (mode === "fraction") {
+    normX = x * 1000;
+    normY = y * 1000;
+    normWidth = width * 1000;
+    normHeight = height * 1000;
+  } else if (mode === "pixels" && imageWidth && imageHeight) {
+    normX = (x / imageWidth) * 1000;
+    normY = (y / imageHeight) * 1000;
+    normWidth = (width / imageWidth) * 1000;
+    normHeight = (height / imageHeight) * 1000;
+  }
+
+  return {
+    x: clamp(Math.round(normX), 0, 1000),
+    y: clamp(Math.round(normY), 0, 1000),
+    width: clamp(Math.round(normWidth), 0, 1000),
+    height: clamp(Math.round(normHeight), 0, 1000),
+  };
+};
+
 /**
  * Detect sensitive information in an image
  *
  * @param {string} imageDataUrl - Base64 data URL of the image (data:image/...;base64,...)
  * @param {string} apiKey - OpenAI API key
+ * @param {number} imageWidth - Processed image width in pixels
+ * @param {number} imageHeight - Processed image height in pixels
  * @returns {Promise<Array>} Array of detection objects with type, text, bbox, confidence
  * @throws {Error} If API call fails or response is invalid
  */
-export async function detectSensitiveInfo(imageDataUrl, apiKey) {
+export async function detectSensitiveInfo(imageDataUrl, apiKey, imageWidth, imageHeight) {
   // Validate inputs
   if (!imageDataUrl || typeof imageDataUrl !== "string") {
     throw new Error("Invalid image data URL provided");
@@ -179,12 +241,7 @@ export async function detectSensitiveInfo(imageDataUrl, apiKey) {
     const normalizedDetections = validDetections.map((detection) => ({
       type: detection.type,
       text: detection.text || "",
-      bbox: {
-        x: Math.round(detection.bbox.x),
-        y: Math.round(detection.bbox.y),
-        width: Math.round(detection.bbox.width),
-        height: Math.round(detection.bbox.height),
-      },
+      bbox: normalizeBBox(detection.bbox, imageWidth, imageHeight),
       confidence: typeof detection.confidence === "number" ? detection.confidence : 0.5,
     }));
 

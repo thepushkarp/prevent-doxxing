@@ -54,7 +54,12 @@ export default function Home() {
 
         // Run detection
         setProcessingProgress("Analyzing with AI vision...");
-        const results = await detectSensitiveInfo(dataUrl, currentApiKey);
+        const results = await detectSensitiveInfo(
+          dataUrl,
+          currentApiKey,
+          info?.width,
+          info?.height,
+        );
 
         if (!results || results.length === 0) {
           setProcessingProgress("No sensitive information detected!");

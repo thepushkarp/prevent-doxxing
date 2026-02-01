@@ -61,7 +61,7 @@ export async function compressImage(file, maxSizeMB = 5, maxDimension = 4000) {
             dataUrl = canvas.toDataURL("image/jpeg", 0.8);
           }
 
-          resolve(dataUrl);
+          resolve({ dataUrl, width, height });
         } catch (error) {
           reject(new Error(`Compression failed: ${error.message}`));
         }
@@ -79,6 +79,25 @@ export async function compressImage(file, maxSizeMB = 5, maxDimension = 4000) {
     };
 
     reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Get image dimensions from a data URL
+ */
+export async function getDataUrlDimensions(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+
+    img.onload = () => {
+      resolve({ width: img.width, height: img.height });
+    };
+
+    img.onerror = () => {
+      reject(new Error("Failed to load image from data URL"));
+    };
+
+    img.src = dataUrl;
   });
 }
 
