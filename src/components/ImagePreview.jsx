@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export default function ImagePreview({ imageDataUrl, detections, onDownload }) {
   const [selectedBoxes, setSelectedBoxes] = useState(new Set());
@@ -10,14 +10,14 @@ export default function ImagePreview({ imageDataUrl, detections, onDownload }) {
   const containerRef = useRef(null);
 
   // Update image dimensions (use natural dimensions, not rendered)
-  const updateDimensions = () => {
+  const updateDimensions = useCallback(() => {
     if (imageRef.current) {
       setImageDimensions({
         width: imageRef.current.naturalWidth,
         height: imageRef.current.naturalHeight,
       });
     }
-  };
+  }, []);
 
   // Initialize all boxes as selected when detections change
   useEffect(() => {
@@ -29,10 +29,10 @@ export default function ImagePreview({ imageDataUrl, detections, onDownload }) {
 
   // Update image dimensions when image loads
   useEffect(() => {
-    if (imageRef.current && imageRef.current.complete) {
+    if (imageRef.current?.complete) {
       updateDimensions();
     }
-  }, [imageDataUrl]);
+  }, [updateDimensions]);
 
   const toggleBox = (index) => {
     setSelectedBoxes((prev) => {
@@ -78,9 +78,19 @@ export default function ImagePreview({ imageDataUrl, detections, onDownload }) {
   };
 
   const getConfidenceColor = (confidence) => {
-    if (confidence >= 0.9) return 'text-green-400';
-    if (confidence >= 0.7) return 'text-yellow-400';
-    return 'text-orange-400';
+    if (confidence >= 0.9) return "text-green-400";
+    if (confidence >= 0.7) return "text-yellow-400";
+    return "text-orange-400";
+  };
+
+  const getDetectionKey = (detection) => {
+    const bbox = detection?.bbox || {};
+    const type = detection?.type ?? "unknown";
+    const text = detection?.text ?? detection?.value ?? "";
+    const confidence =
+      typeof detection?.confidence === "number" ? detection.confidence : "no-confidence";
+
+    return `${type}-${bbox.x ?? 0}-${bbox.y ?? 0}-${bbox.width ?? 0}-${bbox.height ?? 0}-${confidence}-${text}`;
   };
 
   if (!imageDataUrl) {
@@ -99,12 +109,14 @@ export default function ImagePreview({ imageDataUrl, detections, onDownload }) {
         {detections && detections.length > 0 && (
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={selectAll}
               className="px-3 py-1.5 text-sm bg-zinc-700 hover:bg-zinc-600 text-zinc-100 rounded-lg transition-colors"
             >
               Select All
             </button>
             <button
+              type="button"
               onClick={deselectAll}
               className="px-3 py-1.5 text-sm bg-zinc-700 hover:bg-zinc-600 text-zinc-100 rounded-lg transition-colors"
             >
@@ -130,20 +142,25 @@ export default function ImagePreview({ imageDataUrl, detections, onDownload }) {
             {detections.map((detection, index) => {
               const isSelected = selectedBoxes.has(index);
               const isHighlighted = highlightedBox === index;
+              const detectionKey = getDetectionKey(detection);
 
               return (
-                <div
-                  key={index}
+                <button
+                  key={detectionKey}
+                  type="button"
                   style={getBoundingBoxStyle(detection)}
                   className={`
                     absolute border-2 transition-all pointer-events-auto cursor-pointer
-                    ${isSelected
-                      ? isHighlighted
-                        ? 'border-red-400 bg-red-500/30'
-                        : 'border-red-500 bg-red-500/20'
-                      : 'border-zinc-600 bg-zinc-700/10'
+                    ${
+                      isSelected
+                        ? isHighlighted
+                          ? "border-red-400 bg-red-500/30"
+                          : "border-red-500 bg-red-500/20"
+                        : "border-zinc-600 bg-zinc-700/10"
                     }
                   `}
+                  aria-pressed={isSelected}
+                  aria-label={`${detection.type} detection`}
                   onClick={() => toggleBox(index)}
                   onMouseEnter={() => setHighlightedBox(index)}
                   onMouseLeave={() => setHighlightedBox(null)}
@@ -152,7 +169,7 @@ export default function ImagePreview({ imageDataUrl, detections, onDownload }) {
                   <div
                     className={`
                       absolute -top-6 left-0 px-2 py-0.5 text-xs font-medium rounded whitespace-nowrap
-                      ${isSelected ? 'bg-red-500 text-white' : 'bg-zinc-700 text-zinc-300'}
+                      ${isSelected ? "bg-red-500 text-white" : "bg-zinc-700 text-zinc-300"}
                     `}
                   >
                     {detection.type}
@@ -168,9 +185,10 @@ export default function ImagePreview({ imageDataUrl, detections, onDownload }) {
                     <div
                       className={`
                         w-5 h-5 rounded border-2 flex items-center justify-center
-                        ${isSelected
-                          ? 'bg-red-500 border-red-500'
-                          : 'bg-zinc-800/50 border-zinc-600'
+                        ${
+                          isSelected
+                            ? "bg-red-500 border-red-500"
+                            : "bg-zinc-800/50 border-zinc-600"
                         }
                       `}
                     >
@@ -181,6 +199,7 @@ export default function ImagePreview({ imageDataUrl, detections, onDownload }) {
                           stroke="currentColor"
                           viewBox="0 0 24 24"
                         >
+                          <title>Selected</title>
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -191,7 +210,7 @@ export default function ImagePreview({ imageDataUrl, detections, onDownload }) {
                       )}
                     </div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -207,13 +226,14 @@ export default function ImagePreview({ imageDataUrl, detections, onDownload }) {
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {detections.map((detection, index) => {
               const isSelected = selectedBoxes.has(index);
+              const detectionKey = getDetectionKey(detection);
 
               return (
                 <label
-                  key={index}
+                  key={detectionKey}
                   className={`
                     flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors
-                    ${isSelected ? 'bg-zinc-800 border border-zinc-700' : 'bg-zinc-800/50 border border-transparent'}
+                    ${isSelected ? "bg-zinc-800 border border-zinc-700" : "bg-zinc-800/50 border border-transparent"}
                   `}
                   onMouseEnter={() => setHighlightedBox(index)}
                   onMouseLeave={() => setHighlightedBox(null)}
@@ -246,13 +266,14 @@ export default function ImagePreview({ imageDataUrl, detections, onDownload }) {
 
       {/* Download Button */}
       <button
+        type="button"
         onClick={handleDownload}
         disabled={!detections || detections.length === 0 || selectedBoxes.size === 0}
         className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
       >
         {selectedBoxes.size === 0
-          ? 'Select items to redact'
-          : `Download Redacted Image (${selectedBoxes.size} ${selectedBoxes.size === 1 ? 'item' : 'items'})`}
+          ? "Select items to redact"
+          : `Download Redacted Image (${selectedBoxes.size} ${selectedBoxes.size === 1 ? "item" : "items"})`}
       </button>
 
       {/* Instructions */}

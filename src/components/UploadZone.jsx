@@ -1,90 +1,93 @@
-'use client';
+"use client";
 
-import { useState, useCallback } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { compressImage, getImageDimensions, needsCompression } from '@/lib/imageCompressor';
+import { compressImage, getImageDimensions, needsCompression } from "@/lib/imageCompressor";
+import { useCallback, useState } from "react";
+import { useDropzone } from "react-dropzone";
 
 export default function UploadZone({ onImageProcessed }) {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [fileInfo, setFileInfo] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isCompressing, setIsCompressing] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
-  const processFile = useCallback(async (file) => {
-    setError('');
-    setIsCompressing(true);
+  const processFile = useCallback(
+    async (file) => {
+      setError("");
+      setIsCompressing(true);
 
-    try {
-      // Get image dimensions
-      const dimensions = await getImageDimensions(file);
+      try {
+        // Get image dimensions
+        const dimensions = await getImageDimensions(file);
 
-      // Check if compression is needed
-      const compressionCheck = await needsCompression(file);
+        // Check if compression is needed
+        const compressionCheck = await needsCompression(file);
 
-      let processedDataUrl;
-      let finalSize = file.size;
+        let processedDataUrl;
+        let finalSize = file.size;
 
-      if (compressionCheck.needed) {
-        // Compress the image
-        processedDataUrl = await compressImage(file);
-        // Estimate compressed size from data URL length
-        finalSize = Math.round((processedDataUrl.length * 3) / 4);
-      } else {
-        // Use original file
-        processedDataUrl = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
+        if (compressionCheck.needed) {
+          // Compress the image
+          processedDataUrl = await compressImage(file);
+          // Estimate compressed size from data URL length
+          finalSize = Math.round((processedDataUrl.length * 3) / 4);
+        } else {
+          // Use original file
+          processedDataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        }
+
+        // Set file info
+        setFileInfo({
+          name: file.name,
+          originalSize: file.size,
+          size: finalSize,
+          width: dimensions.width,
+          height: dimensions.height,
+          wasCompressed: compressionCheck.needed,
         });
+
+        setUploadedFile(file);
+        setPreviewUrl(processedDataUrl);
+
+        // Notify parent component
+        if (onImageProcessed) {
+          onImageProcessed({
+            file,
+            dataUrl: processedDataUrl,
+            info: {
+              name: file.name,
+              size: finalSize,
+              width: dimensions.width,
+              height: dimensions.height,
+            },
+          });
+        }
+      } catch (err) {
+        setError(`Failed to process image: ${err.message}`);
+        console.error("Image processing error:", err);
+      } finally {
+        setIsCompressing(false);
       }
-
-      // Set file info
-      setFileInfo({
-        name: file.name,
-        originalSize: file.size,
-        size: finalSize,
-        width: dimensions.width,
-        height: dimensions.height,
-        wasCompressed: compressionCheck.needed,
-      });
-
-      setUploadedFile(file);
-      setPreviewUrl(processedDataUrl);
-
-      // Notify parent component
-      if (onImageProcessed) {
-        onImageProcessed({
-          file,
-          dataUrl: processedDataUrl,
-          info: {
-            name: file.name,
-            size: finalSize,
-            width: dimensions.width,
-            height: dimensions.height,
-          },
-        });
-      }
-    } catch (err) {
-      setError(`Failed to process image: ${err.message}`);
-      console.error('Image processing error:', err);
-    } finally {
-      setIsCompressing(false);
-    }
-  }, [onImageProcessed]);
+    },
+    [onImageProcessed],
+  );
 
   const onDrop = useCallback(
     async (acceptedFiles, rejectedFiles) => {
       // Handle rejected files
       if (rejectedFiles.length > 0) {
         const rejection = rejectedFiles[0];
-        if (rejection.errors[0]?.code === 'file-invalid-type') {
-          setError('Please upload a PNG or JPEG image');
-        } else if (rejection.errors[0]?.code === 'file-too-large') {
-          setError('File is too large (max 20MB)');
+        if (rejection.errors[0]?.code === "file-invalid-type") {
+          setError("Please upload a PNG or JPEG image");
+        } else if (rejection.errors[0]?.code === "file-too-large") {
+          setError("File is too large (max 20MB)");
         } else {
-          setError('Invalid file. Please try another image.');
+          setError("Invalid file. Please try another image.");
         }
         return;
       }
@@ -94,14 +97,14 @@ export default function UploadZone({ onImageProcessed }) {
         await processFile(acceptedFiles[0]);
       }
     },
-    [processFile]
+    [processFile],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'image/png': ['.png'],
-      'image/jpeg': ['.jpg', '.jpeg'],
+      "image/png": [".png"],
+      "image/jpeg": [".jpg", ".jpeg"],
     },
     maxFiles: 1,
     maxSize: 20 * 1024 * 1024, // 20MB max
@@ -118,7 +121,7 @@ export default function UploadZone({ onImageProcessed }) {
     setUploadedFile(null);
     setFileInfo(null);
     setPreviewUrl(null);
-    setError('');
+    setError("");
   };
 
   if (uploadedFile && previewUrl) {
@@ -130,11 +133,7 @@ export default function UploadZone({ onImageProcessed }) {
         <div className="space-y-4">
           {/* Preview Thumbnail */}
           <div className="relative w-full aspect-video bg-zinc-800 rounded-lg overflow-hidden">
-            <img
-              src={previewUrl}
-              alt="Preview"
-              className="w-full h-full object-contain"
-            />
+            <img src={previewUrl} alt="Preview" className="w-full h-full object-contain" />
           </div>
 
           {/* File Information */}
@@ -170,6 +169,7 @@ export default function UploadZone({ onImageProcessed }) {
 
           {/* Change File Button */}
           <button
+            type="button"
             onClick={handleChangeFile}
             className="w-full px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-zinc-100 rounded-lg transition-colors font-medium"
           >
@@ -187,11 +187,12 @@ export default function UploadZone({ onImageProcessed }) {
         {...getRootProps()}
         className={`
           relative p-12 border-2 border-dashed rounded-lg cursor-pointer transition-all
-          ${isDragActive
-            ? 'border-blue-500 bg-blue-500/10'
-            : 'border-zinc-700 bg-zinc-900 hover:border-zinc-600 hover:bg-zinc-800'
+          ${
+            isDragActive
+              ? "border-blue-500 bg-blue-500/10"
+              : "border-zinc-700 bg-zinc-900 hover:border-zinc-600 hover:bg-zinc-800"
           }
-          ${isCompressing ? 'pointer-events-none opacity-50' : ''}
+          ${isCompressing ? "pointer-events-none opacity-50" : ""}
         `}
       >
         <input {...getInputProps()} />
@@ -199,7 +200,7 @@ export default function UploadZone({ onImageProcessed }) {
         <div className="flex flex-col items-center justify-center text-center space-y-4">
           {isCompressing ? (
             <>
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500" />
               <p className="text-zinc-300 font-medium">Processing image...</p>
               <p className="text-sm text-zinc-500">Compressing and optimizing</p>
             </>
@@ -212,6 +213,7 @@ export default function UploadZone({ onImageProcessed }) {
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
+                <title>Upload</title>
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"

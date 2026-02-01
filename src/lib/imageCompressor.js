@@ -23,7 +23,7 @@ export async function compressImage(file, maxSizeMB = 5, maxDimension = 4000) {
       img.onload = () => {
         try {
           // Create canvas for compression
-          const canvas = document.createElement('canvas');
+          const canvas = document.createElement("canvas");
           let { width, height } = img;
 
           // Scale down if image is too large
@@ -36,19 +36,19 @@ export async function compressImage(file, maxSizeMB = 5, maxDimension = 4000) {
           canvas.width = width;
           canvas.height = height;
 
-          const ctx = canvas.getContext('2d');
+          const ctx = canvas.getContext("2d");
           ctx.drawImage(img, 0, 0, width, height);
 
           // Binary search for optimal quality
           let quality = 0.9;
-          let dataUrl = canvas.toDataURL('image/jpeg', quality);
+          let dataUrl = canvas.toDataURL("image/jpeg", quality);
           const maxBytes = maxSizeMB * 1024 * 1024 * 1.37; // Base64 overhead
 
           // Reduce quality until size is acceptable
           let iterations = 0;
           while (dataUrl.length > maxBytes && quality > 0.1 && iterations < 10) {
             quality -= 0.1;
-            dataUrl = canvas.toDataURL('image/jpeg', quality);
+            dataUrl = canvas.toDataURL("image/jpeg", quality);
             iterations++;
           }
 
@@ -58,7 +58,7 @@ export async function compressImage(file, maxSizeMB = 5, maxDimension = 4000) {
             canvas.width = Math.floor(width * scaleFactor);
             canvas.height = Math.floor(height * scaleFactor);
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            dataUrl = canvas.toDataURL("image/jpeg", 0.8);
           }
 
           resolve(dataUrl);
@@ -68,14 +68,14 @@ export async function compressImage(file, maxSizeMB = 5, maxDimension = 4000) {
       };
 
       img.onerror = () => {
-        reject(new Error('Failed to load image'));
+        reject(new Error("Failed to load image"));
       };
 
       img.src = event.target.result;
     };
 
     reader.onerror = () => {
-      reject(new Error('Failed to read file'));
+      reject(new Error("Failed to read file"));
     };
 
     reader.readAsDataURL(file);
@@ -97,7 +97,7 @@ export async function getImageDimensions(file) {
 
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error('Failed to load image'));
+      reject(new Error("Failed to load image"));
     };
 
     img.src = url;
@@ -121,17 +121,17 @@ export async function needsCompression(file, maxSizeMB = 5) {
   const maxBytes = maxSizeMB * 1024 * 1024;
 
   if (file.size > maxBytes) {
-    return { needed: true, reason: 'File size exceeds limit' };
+    return { needed: true, reason: "File size exceeds limit" };
   }
 
   try {
     const { width, height } = await getImageDimensions(file);
     if (width > 4000 || height > 4000) {
-      return { needed: true, reason: 'Image dimensions exceed limit' };
+      return { needed: true, reason: "Image dimensions exceed limit" };
     }
   } catch (error) {
     // If we can't check dimensions, compress to be safe
-    return { needed: true, reason: 'Unable to verify dimensions' };
+    return { needed: true, reason: "Unable to verify dimensions" };
   }
 
   return { needed: false };

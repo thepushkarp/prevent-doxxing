@@ -13,7 +13,8 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   title: "Prevent Doxxing | AI-Powered Privacy Protection",
-  description: "Automatically detect and redact sensitive information from images using advanced AI vision. Protect your privacy with AI-powered PII detection and redaction.",
+  description:
+    "Automatically detect and redact sensitive information from images using advanced AI vision. Protect your privacy with AI-powered PII detection and redaction.",
   keywords: "privacy, doxxing, redaction, PII, AI, OpenAI, sensitive information, image protection",
 };
 

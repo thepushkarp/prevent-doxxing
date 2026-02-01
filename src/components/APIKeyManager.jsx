@@ -1,24 +1,24 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
 import {
+  clearApiKey,
   getApiKey,
+  hasApiKey,
+  maskApiKey,
   saveApiKey,
   saveSessionApiKey,
-  clearApiKey,
   validateApiKey,
-  maskApiKey,
-  hasApiKey,
-} from '@/lib/apiKeyManager';
+} from "@/lib/apiKeyManager";
+import { useEffect, useState } from "react";
 
 export default function APIKeyManager({ onKeyValidated }) {
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState("");
   const [isValidating, setIsValidating] = useState(false);
-  const [validationError, setValidationError] = useState('');
+  const [validationError, setValidationError] = useState("");
   const [validationSuccess, setValidationSuccess] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [savedKey, setSavedKey] = useState('');
+  const [savedKey, setSavedKey] = useState("");
 
   // Check for existing saved key on mount
   useEffect(() => {
@@ -33,7 +33,7 @@ export default function APIKeyManager({ onKeyValidated }) {
   }, [onKeyValidated]);
 
   const handleValidate = async () => {
-    setValidationError('');
+    setValidationError("");
     setValidationSuccess(false);
     setIsValidating(true);
 
@@ -42,12 +42,12 @@ export default function APIKeyManager({ onKeyValidated }) {
 
       if (result.valid) {
         setValidationSuccess(true);
-        setValidationError('');
+        setValidationError("");
       } else {
-        setValidationError(result.error || 'Validation failed');
+        setValidationError(result.error || "Validation failed");
       }
     } catch (error) {
-      setValidationError('An unexpected error occurred');
+      setValidationError("An unexpected error occurred");
     } finally {
       setIsValidating(false);
     }
@@ -55,7 +55,7 @@ export default function APIKeyManager({ onKeyValidated }) {
 
   const handleSave = () => {
     if (!validationSuccess) {
-      setValidationError('Please validate the API key first');
+      setValidationError("Please validate the API key first");
       return;
     }
 
@@ -66,7 +66,7 @@ export default function APIKeyManager({ onKeyValidated }) {
     }
 
     setSavedKey(apiKey);
-    setApiKey('');
+    setApiKey("");
 
     if (onKeyValidated) {
       onKeyValidated(getApiKey());
@@ -75,10 +75,10 @@ export default function APIKeyManager({ onKeyValidated }) {
 
   const handleClear = () => {
     clearApiKey();
-    setSavedKey('');
-    setApiKey('');
+    setSavedKey("");
+    setApiKey("");
     setValidationSuccess(false);
-    setValidationError('');
+    setValidationError("");
 
     if (onKeyValidated) {
       onKeyValidated(null);
@@ -86,7 +86,7 @@ export default function APIKeyManager({ onKeyValidated }) {
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && apiKey && !isValidating) {
+    if (e.key === "Enter" && apiKey && !isValidating) {
       handleValidate();
     }
   };
@@ -104,6 +104,7 @@ export default function APIKeyManager({ onKeyValidated }) {
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
+            <title>Warning</title>
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -127,6 +128,7 @@ export default function APIKeyManager({ onKeyValidated }) {
                 <p className="font-mono text-zinc-300">{maskApiKey(savedKey)}</p>
               </div>
               <button
+                type="button"
                 onClick={handleClear}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
               >
@@ -146,7 +148,7 @@ export default function APIKeyManager({ onKeyValidated }) {
             <div className="relative">
               <input
                 id="apiKey"
-                type={showKey ? 'text' : 'password'}
+                type={showKey ? "text" : "password"}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 onKeyPress={handleKeyPress}
@@ -158,7 +160,7 @@ export default function APIKeyManager({ onKeyValidated }) {
                 onClick={() => setShowKey(!showKey)}
                 className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
               >
-                {showKey ? 'Hide' : 'Show'}
+                {showKey ? "Hide" : "Show"}
               </button>
             </div>
           </div>
@@ -189,7 +191,9 @@ export default function APIKeyManager({ onKeyValidated }) {
                   onChange={() => setRememberMe(false)}
                   className="w-4 h-4 text-blue-600 bg-zinc-800 border-zinc-600 focus:ring-blue-500"
                 />
-                <span className="text-sm text-zinc-300">This session only (cleared when browser closes)</span>
+                <span className="text-sm text-zinc-300">
+                  This session only (cleared when browser closes)
+                </span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
@@ -199,7 +203,9 @@ export default function APIKeyManager({ onKeyValidated }) {
                   onChange={() => setRememberMe(true)}
                   className="w-4 h-4 text-blue-600 bg-zinc-800 border-zinc-600 focus:ring-blue-500"
                 />
-                <span className="text-sm text-zinc-300">Remember me (persistent across sessions)</span>
+                <span className="text-sm text-zinc-300">
+                  Remember me (persistent across sessions)
+                </span>
               </label>
             </div>
           </div>
@@ -207,13 +213,15 @@ export default function APIKeyManager({ onKeyValidated }) {
           {/* Action Buttons */}
           <div className="flex gap-3">
             <button
+              type="button"
               onClick={handleValidate}
               disabled={!apiKey || isValidating}
               className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
             >
-              {isValidating ? 'Validating...' : 'Validate'}
+              {isValidating ? "Validating..." : "Validate"}
             </button>
             <button
+              type="button"
               onClick={handleSave}
               disabled={!validationSuccess}
               className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"

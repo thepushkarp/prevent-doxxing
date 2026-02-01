@@ -10,7 +10,7 @@ import {
   extractResponseText,
   parseStructuredResponse,
   retryWithBackoff,
-} from './apiClient.js';
+} from "./apiClient.js";
 
 /**
  * Detection prompt for Vision AI
@@ -96,16 +96,16 @@ If NO sensitive information is found, return:
  */
 export async function detectSensitiveInfo(imageDataUrl, apiKey) {
   // Validate inputs
-  if (!imageDataUrl || typeof imageDataUrl !== 'string') {
-    throw new Error('Invalid image data URL provided');
+  if (!imageDataUrl || typeof imageDataUrl !== "string") {
+    throw new Error("Invalid image data URL provided");
   }
 
-  if (!apiKey || typeof apiKey !== 'string') {
-    throw new Error('OpenAI API key is required');
+  if (!apiKey || typeof apiKey !== "string") {
+    throw new Error("OpenAI API key is required");
   }
 
   // Validate data URL format
-  if (!imageDataUrl.startsWith('data:image/')) {
+  if (!imageDataUrl.startsWith("data:image/")) {
     throw new Error('Image data URL must start with "data:image/"');
   }
 
@@ -117,28 +117,28 @@ export async function detectSensitiveInfo(imageDataUrl, apiKey) {
     const response = await retryWithBackoff(
       async () => {
         return await callOpenAIResponses([input], apiKey, {
-          model: 'gpt-5.2',
+          model: "gpt-5.2",
           temperature: 1,
-          reasoning: { effort: 'medium' }, // Nested object for reasoning effort
+          reasoning: { effort: "medium" }, // Nested object for reasoning effort
           max_output_tokens: 4000,
-          text: { format: { type: 'json_object' } }, // Responses API text format - format must be an object with type field
+          text: { format: { type: "json_object" } }, // Responses API text format - format must be an object with type field
           store: false, // Don't store for privacy
         });
       },
       3, // Max 3 retries
-      1000 // 1 second base delay
+      1000, // 1 second base delay
     );
 
     // Extract text from Responses API output structure
     const content = extractResponseText(response);
     if (!content) {
-      throw new Error('Invalid response from OpenAI API: no content in output');
+      throw new Error("Invalid response from OpenAI API: no content in output");
     }
 
     // Parse the structured JSON response
     const parsed = parseStructuredResponse(content);
     if (!parsed) {
-      throw new Error('Failed to parse JSON response from OpenAI');
+      throw new Error("Failed to parse JSON response from OpenAI");
     }
 
     // Validate response structure
@@ -150,25 +150,25 @@ export async function detectSensitiveInfo(imageDataUrl, apiKey) {
     const validDetections = parsed.detections.filter((detection) => {
       // Check required fields
       if (!detection.type || !detection.bbox) {
-        console.warn('Skipping invalid detection: missing type or bbox', detection);
+        console.warn("Skipping invalid detection: missing type or bbox", detection);
         return false;
       }
 
       // Validate bbox structure
       const { bbox } = detection;
       if (
-        typeof bbox.x !== 'number' ||
-        typeof bbox.y !== 'number' ||
-        typeof bbox.width !== 'number' ||
-        typeof bbox.height !== 'number'
+        typeof bbox.x !== "number" ||
+        typeof bbox.y !== "number" ||
+        typeof bbox.width !== "number" ||
+        typeof bbox.height !== "number"
       ) {
-        console.warn('Skipping invalid detection: invalid bbox format', detection);
+        console.warn("Skipping invalid detection: invalid bbox format", detection);
         return false;
       }
 
       // Validate bbox values are non-negative
       if (bbox.x < 0 || bbox.y < 0 || bbox.width <= 0 || bbox.height <= 0) {
-        console.warn('Skipping invalid detection: negative or zero bbox values', detection);
+        console.warn("Skipping invalid detection: negative or zero bbox values", detection);
         return false;
       }
 
@@ -178,33 +178,33 @@ export async function detectSensitiveInfo(imageDataUrl, apiKey) {
     // Normalize detections (ensure all fields exist with defaults)
     const normalizedDetections = validDetections.map((detection) => ({
       type: detection.type,
-      text: detection.text || '',
+      text: detection.text || "",
       bbox: {
         x: Math.round(detection.bbox.x),
         y: Math.round(detection.bbox.y),
         width: Math.round(detection.bbox.width),
         height: Math.round(detection.bbox.height),
       },
-      confidence: typeof detection.confidence === 'number' ? detection.confidence : 0.5,
+      confidence: typeof detection.confidence === "number" ? detection.confidence : 0.5,
     }));
 
     return normalizedDetections;
   } catch (error) {
     // Enhance error messages for common issues
-    if (error.message.includes('Invalid API key')) {
-      throw new Error('Invalid OpenAI API key. Please check your API key and try again.');
+    if (error.message.includes("Invalid API key")) {
+      throw new Error("Invalid OpenAI API key. Please check your API key and try again.");
     }
 
-    if (error.message.includes('401')) {
-      throw new Error('Authentication failed. Please verify your OpenAI API key.');
+    if (error.message.includes("401")) {
+      throw new Error("Authentication failed. Please verify your OpenAI API key.");
     }
 
-    if (error.message.includes('429')) {
-      throw new Error('Rate limit exceeded. Please try again in a few moments.');
+    if (error.message.includes("429")) {
+      throw new Error("Rate limit exceeded. Please try again in a few moments.");
     }
 
-    if (error.message.includes('quota')) {
-      throw new Error('OpenAI API quota exceeded. Please check your account usage.');
+    if (error.message.includes("quota")) {
+      throw new Error("OpenAI API quota exceeded. Please check your account usage.");
     }
 
     // Re-throw with context
@@ -220,23 +220,23 @@ export async function detectSensitiveInfo(imageDataUrl, apiKey) {
  */
 export function getDetectionLabel(type) {
   const labels = {
-    ssn: 'Social Security Number',
-    aadhar: 'Aadhar Number',
-    pan: 'PAN Number',
-    passport: 'Passport Number',
-    phone: 'Phone Number',
-    email: 'Email Address',
-    address: 'Physical Address',
-    name: 'Name',
-    dob: 'Date of Birth',
-    gender: 'Gender',
-    race: 'Race/Ethnicity',
-    face: 'Face',
-    license_plate: 'License Plate',
-    house_number: 'House Number',
+    ssn: "Social Security Number",
+    aadhar: "Aadhar Number",
+    pan: "PAN Number",
+    passport: "Passport Number",
+    phone: "Phone Number",
+    email: "Email Address",
+    address: "Physical Address",
+    name: "Name",
+    dob: "Date of Birth",
+    gender: "Gender",
+    race: "Race/Ethnicity",
+    face: "Face",
+    license_plate: "License Plate",
+    house_number: "House Number",
   };
 
-  return labels[type] || type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+  return labels[type] || type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
 /**
@@ -269,9 +269,7 @@ export function getDetectionStats(detections) {
   const total = detections.length;
   const byType = groupDetectionsByType(detections);
   const avgConfidence =
-    total > 0
-      ? detections.reduce((sum, d) => sum + d.confidence, 0) / total
-      : 0;
+    total > 0 ? detections.reduce((sum, d) => sum + d.confidence, 0) / total : 0;
 
   return {
     total,

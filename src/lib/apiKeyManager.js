@@ -5,15 +5,15 @@
  * Keys are stored in localStorage with clear security warnings to users.
  */
 
-const STORAGE_KEY = 'prevent_doxxing_api_key';
-const SESSION_KEY = 'prevent_doxxing_session_key';
+const STORAGE_KEY = "prevent_doxxing_api_key";
+const SESSION_KEY = "prevent_doxxing_session_key";
 
 /**
  * Save API key to localStorage (persistent across sessions)
  */
 export function saveApiKey(key) {
-  if (!key || typeof key !== 'string') {
-    throw new Error('Invalid API key');
+  if (!key || typeof key !== "string") {
+    throw new Error("Invalid API key");
   }
   localStorage.setItem(STORAGE_KEY, key.trim());
 }
@@ -22,8 +22,8 @@ export function saveApiKey(key) {
  * Save API key to sessionStorage (cleared when browser closes)
  */
 export function saveSessionApiKey(key) {
-  if (!key || typeof key !== 'string') {
-    throw new Error('Invalid API key');
+  if (!key || typeof key !== "string") {
+    throw new Error("Invalid API key");
   }
   sessionStorage.setItem(SESSION_KEY, key.trim());
 }
@@ -58,39 +58,40 @@ export function clearApiKey() {
  * Returns { valid: boolean, error?: string }
  */
 export async function validateApiKey(key) {
-  if (!key || typeof key !== 'string') {
-    return { valid: false, error: 'API key is required' };
+  if (!key || typeof key !== "string") {
+    return { valid: false, error: "API key is required" };
   }
 
   const trimmedKey = key.trim();
 
   // Basic format check
-  if (!trimmedKey.startsWith('sk-')) {
+  if (!trimmedKey.startsWith("sk-")) {
     return { valid: false, error: 'API key must start with "sk-"' };
   }
 
   try {
-    const response = await fetch('https://api.openai.com/v1/models', {
-      method: 'GET',
+    const response = await fetch("https://api.openai.com/v1/models", {
+      method: "GET",
       headers: {
-        'Authorization': `Bearer ${trimmedKey}`,
+        Authorization: `Bearer ${trimmedKey}`,
       },
     });
 
     if (response.ok) {
       return { valid: true };
-    } else if (response.status === 401) {
-      return { valid: false, error: 'Invalid API key' };
-    } else if (response.status === 429) {
-      return { valid: false, error: 'Rate limited. Please try again later.' };
-    } else {
-      return { valid: false, error: `Validation failed: ${response.statusText}` };
     }
+    if (response.status === 401) {
+      return { valid: false, error: "Invalid API key" };
+    }
+    if (response.status === 429) {
+      return { valid: false, error: "Rate limited. Please try again later." };
+    }
+    return { valid: false, error: `Validation failed: ${response.statusText}` };
   } catch (error) {
     // Network error or CORS issue
     return {
       valid: false,
-      error: 'Unable to validate key. Check your internet connection.'
+      error: "Unable to validate key. Check your internet connection.",
     };
   }
 }
@@ -99,6 +100,6 @@ export async function validateApiKey(key) {
  * Mask API key for display (show only first/last chars)
  */
 export function maskApiKey(key) {
-  if (!key || key.length < 8) return '••••••••';
+  if (!key || key.length < 8) return "••••••••";
   return `${key.slice(0, 7)}...${key.slice(-4)}`;
 }

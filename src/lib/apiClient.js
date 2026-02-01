@@ -15,7 +15,7 @@
  */
 export async function callOpenAIResponses(input, apiKey, options = {}) {
   const {
-    model = 'gpt-5.2',
+    model = "gpt-5.2",
     temperature = 0.7,
     max_output_tokens = 4000,
     store = false, // Don't store responses by default for privacy
@@ -33,11 +33,11 @@ export async function callOpenAIResponses(input, apiKey, options = {}) {
 
   // Try direct API call first
   try {
-    const response = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify(requestBody),
     });
@@ -50,8 +50,8 @@ export async function callOpenAIResponses(input, apiKey, options = {}) {
     return await response.json();
   } catch (error) {
     // Check if it's a CORS error
-    if (error.message.includes('CORS') || error.name === 'TypeError') {
-      console.warn('CORS blocked, falling back to proxy');
+    if (error.message.includes("CORS") || error.name === "TypeError") {
+      console.warn("CORS blocked, falling back to proxy");
       return await callViaProxyResponses(input, apiKey, options);
     }
 
@@ -63,10 +63,10 @@ export async function callOpenAIResponses(input, apiKey, options = {}) {
  * Fallback: Call OpenAI Responses API via Next.js proxy
  */
 async function callViaProxyResponses(input, apiKey, options) {
-  const response = await fetch('/api/proxy-responses', {
-    method: 'POST',
+  const response = await fetch("/api/proxy-responses", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
       input,
@@ -89,19 +89,19 @@ async function callViaProxyResponses(input, apiKey, options) {
  */
 export function extractResponseText(apiResponse) {
   if (!apiResponse || !apiResponse.output) {
-    throw new Error('Invalid Responses API response: missing output');
+    throw new Error("Invalid Responses API response: missing output");
   }
 
   // Find the message item in output array
-  const messageItem = apiResponse.output.find(item => item.type === 'message');
+  const messageItem = apiResponse.output.find((item) => item.type === "message");
   if (!messageItem) {
-    throw new Error('No message found in Responses API output');
+    throw new Error("No message found in Responses API output");
   }
 
   // Find the output_text content
-  const textContent = messageItem.content?.find(c => c.type === 'output_text');
+  const textContent = messageItem.content?.find((c) => c.type === "output_text");
   if (!textContent) {
-    throw new Error('No text content found in message');
+    throw new Error("No text content found in message");
   }
 
   return textContent.text;
@@ -153,20 +153,20 @@ export function createVisionInput(imageDataUrl, prompt) {
   // Validate data URL format
   const match = imageDataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/);
   if (!match) {
-    throw new Error('Invalid image data URL');
+    throw new Error("Invalid image data URL");
   }
 
   return {
-    role: 'user',
+    role: "user",
     content: [
       {
-        type: 'input_text',
+        type: "input_text",
         text: prompt,
       },
       {
-        type: 'input_image',
+        type: "input_image",
         image_url: imageDataUrl,
-        detail: 'auto', // auto, low, or high
+        detail: "auto", // auto, low, or high
       },
     ],
   };
@@ -183,13 +183,13 @@ export async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000) {
       if (i === maxRetries - 1) throw error;
 
       // Don't retry on auth errors
-      if (error.message.includes('401') || error.message.includes('Invalid API key')) {
+      if (error.message.includes("401") || error.message.includes("Invalid API key")) {
         throw error;
       }
 
-      const delay = baseDelay * Math.pow(2, i);
+      const delay = baseDelay * 2 ** i;
       console.log(`Retry ${i + 1}/${maxRetries} after ${delay}ms`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 }
