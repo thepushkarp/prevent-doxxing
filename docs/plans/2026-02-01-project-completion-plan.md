@@ -18,46 +18,9 @@
 
 ---
 
-### Task 1: Testing harness (Bun test)
+### Task 1: Bounding box alignment fix (image flow)
 
-**Parallelizable:** Yes (with Task 2)
-
-**Files:**
-- Create: `tests/normalize-bbox.test.js`
-- Modify: `package.json`
-
-**Step 1: Write failing test**
-```js
-import { describe, expect, it } from "bun:test";
-import { normalizeBBox } from "../src/lib/detection";
-
-describe("normalizeBBox", () => {
-  it("normalizes pixel bboxes to 0-1000", () => {
-    const bbox = normalizeBBox({ x: 100, y: 200, width: 300, height: 400 }, 1000, 1000);
-    expect(bbox.x).toBe(100);
-    expect(bbox.y).toBe(200);
-    expect(bbox.width).toBe(300);
-    expect(bbox.height).toBe(400);
-  });
-});
-```
-
-**Step 2: Run test (expect FAIL)**
-Run: `bun test tests/normalize-bbox.test.js`
-Expected: FAIL (normalizeBBox not exported)
-
-**Step 3: Export normalizeBBox**
-- Export it from `src/lib/detection.js`
-
-**Step 4: Run test (expect PASS)**
-Run: `bun test tests/normalize-bbox.test.js`
-Expected: PASS
-
----
-
-### Task 2: Bounding box alignment fix (image flow)
-
-**Parallelizable:** Yes (with Task 1)
+**Parallelizable:** Yes
 
 **Files:**
 - Modify: `src/lib/imageCompressor.js`
@@ -88,39 +51,58 @@ Expected: PASS
 
 ---
 
-### Task 3: Image redaction parity
+### Task 2: Image redaction parity
 
-**Parallelizable:** Yes (with Task 4)
+**Parallelizable:** Yes (with Task 3)
 
 **Files:**
 - Modify: `src/lib/imageRedactor.js`
 
-**Step 1: Write failing test**
-```js
-import { describe, expect, it } from "bun:test";
-import { normalizeBBox } from "../src/lib/detection";
-
-describe("redaction bbox", () => {
-  it("keeps normalized coords within 0-1000", () => {
-    const bbox = normalizeBBox({ x: 1200, y: 1300, width: 200, height: 200 }, 1000, 1000);
-    expect(bbox.x).toBeLessThanOrEqual(1000);
-    expect(bbox.y).toBeLessThanOrEqual(1000);
-  });
-});
-```
-
-**Step 2: Run test (expect PASS)**
-Run: `bun test tests/normalize-bbox.test.js`
-Expected: PASS
-
-**Step 3: Ensure redactor consumes normalized coords**
+**Step 1: Ensure redactor consumes normalized coords**
 - Confirm redactor converts 0–1000 → pixels before drawing (no direct pixel assumption)
+
+---
+
+### Task 3: Multi-agent detection + consensus (image flow)
+
+**Parallelizable:** Yes (with Task 4)
+
+**Files:**
+- Modify: `src/app/page.js`
+- Modify: `src/lib/detection.js`
+- Create: `src/lib/parallelDetection.js`
+
+**Step 1: Add focused agent prompts**
+- Define 5 prompts with different focus areas:
+  - Gov IDs (SSN/Aadhar/PAN/Passport)
+  - Contact info (phone/email/address)
+  - Visual (faces/license plates/house numbers)
+  - General high-recall
+  - Conservative high-confidence
+
+**Step 2: Implement parallel detection runner**
+- `runAgentDetection(imageDataUrl, prompt, apiKey, imageWidth, imageHeight)`
+- Use `Promise.all` to run 5 agent calls in parallel
+- Normalize each agent’s bboxes to 0–1000
+
+**Step 3: Consensus refinement**
+- Cluster detections by type + spatial overlap (IoU > 0.4 or center distance threshold)
+- Average bbox coords per cluster
+- Compute `agentVotes` and averaged confidence
+- Return refined detections with `{ agentVotes }`
+
+**Step 4: Wire into UI**
+- Replace single-pass detection with consensus output
+- Update progress text to show per-agent completion (lightweight strings)
+
+**Step 5: Manual verification**
+- Run on the same image multiple times; expect more stable bboxes and fewer outliers.
 
 ---
 
 ### Task 4: File pipeline (PDF/DOCX)
 
-**Parallelizable:** Yes (with Task 5)
+**Parallelizable:** Yes (with Task 3)
 
 **Files:**
 - Create: `src/app/api/detect/route.js`
@@ -130,32 +112,20 @@ Expected: PASS
 - Modify: `src/app/page.js`
 - Modify: `src/components/UploadZone.jsx`
 
-**Step 1: Write failing test (API contract)**
-```js
-import { describe, expect, it } from "bun:test";
-
-describe("file detect API", () => {
-  it("returns detections array", async () => {
-    const res = await fetch("/api/detect", { method: "POST" });
-    expect(res.status).toBe(400);
-  });
-});
-```
-
-**Step 2: Implement `/api/detect`**
+**Step 1: Implement `/api/detect`**
 - Accept multipart file
 - Extract text (PDF/DOCX)
 - Call OpenAI for PII extraction
 - Return structured detections
 
-**Step 3: Implement `/api/redact`**
+**Step 2: Implement `/api/redact`**
 - Apply redactions to file content
 - Return redacted file blob
 
-**Step 4: Update UI flow**
+**Step 3: Update UI flow**
 - Add file-type branching in upload + review
 
-**Step 5: Manual verification**
+**Step 4: Manual verification**
 - Upload a PDF with SSN, confirm redacted output is non-selectable.
 
 ---
@@ -221,3 +191,4 @@ Expected: updated notes
 - Confirm file formats to support first: PDF + DOCX only?
 - Allow server-side storage of files or strictly process in-memory?
 - Do we want manual bbox calibration as a fallback?
+- Should agent count be configurable (3 vs 5) for speed?
