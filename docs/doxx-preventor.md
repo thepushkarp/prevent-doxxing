@@ -75,3 +75,5 @@ Other considerations:
 - OpenAI
 - Vercel
 - GitHub
+- Biome (linting/formatting)
+- Husky + lint-staged (pre-commit hooks)
