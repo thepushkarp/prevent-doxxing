@@ -18,6 +18,34 @@
 
 ---
 
+## System Components & Flow (reasoned summary)
+
+**Client components**
+- **API Key Manager**: local-only key storage + validation; gates detection until valid.
+- **Upload Zone**: file/image intake; shows type + size; routes to correct pipeline.
+- **Processing View**: status/progress, agent completion updates, error surfacing.
+- **Review Editor**: list + bbox overlays; toggles per detection; bulk actions.
+- **Download Panel**: redaction action + file download states.
+
+**Core processing layer**
+- **PDF.js** for PDF text extraction.
+- **Mammoth.js** for DOCX text extraction.
+- **Canvas API** for image compression + redaction rendering.
+- **Parallel Detection Engine** runs 5 focused agents and refines by consensus.
+- **Redactors**: image redaction (bbox draw) + file redaction (remove PII).
+
+**Data flow summary**
+1) User provides API key.
+2) Upload Zone ingests image or file.
+3) Parser extracts text or image data.
+4) Parallel detection runs 5 agents and aggregates consensus.
+5) Review Editor displays detections + bbox overlays.
+6) User toggles/edits.
+7) Redactor produces output.
+8) Download Panel provides final file/image.
+
+---
+
 ### Task 1: Bounding box alignment fix (image flow)
 
 **Parallelizable:** Yes
@@ -49,6 +77,10 @@
 **Step 5: Manual verification**
 - Re-test on wide + tall images; overlay alignment should be close.
 
+**Success:**
+- Bboxes overlay within a few pixels on both tall and wide images.
+- Normalized coords remain 0–1000; no systematic offset after resize/compress.
+
 ---
 
 ### Task 2: Image redaction parity
@@ -60,6 +92,9 @@
 
 **Step 1: Ensure redactor consumes normalized coords**
 - Confirm redactor converts 0–1000 → pixels before drawing (no direct pixel assumption)
+
+**Success:**
+- Redacted output aligns with preview overlays for the same detection set.
 
 ---
 
@@ -98,6 +133,11 @@
 **Step 5: Manual verification**
 - Run on the same image multiple times; expect more stable bboxes and fewer outliers.
 
+**Success:**
+- Five agent calls run in parallel, aggregate into a single consensus list.
+- Each detection includes `agentVotes` and averaged bbox/confidence.
+- UI shows per-agent completion text without blocking the main thread.
+
 ---
 
 ### Task 4: File pipeline (PDF/DOCX)
@@ -128,6 +168,11 @@
 **Step 4: Manual verification**
 - Upload a PDF with SSN, confirm redacted output is non-selectable.
 
+**Success:**
+- `/api/detect` returns structured detections for PDF + DOCX.
+- `/api/redact` returns a redacted file with PII removed.
+- UI branches image vs file correctly and shows review/redact actions.
+
 ---
 
 ### Task 5: UX polish + controls
@@ -139,14 +184,23 @@
 - Modify: `src/components/UploadZone.jsx`
 - Modify: `src/app/page.js`
 
-**Step 1: Write failing UX check**
+**Step 1: Manual UX check**
 - Ensure user can toggle all detections and see counts update.
 
-**Step 2: Implement bulk actions**
-- Select All / Deselect All for files too
+**Step 2: Review Editor behavior**
+- Per-detection toggle for images and files
+- Bulk Select All / Deselect All
 
-**Step 3: Manual verification**
+**Step 3: Download Panel states**
+- Disable download until redaction is ready
+- Clear status when new upload occurs
+
+**Step 4: Manual verification**
 - Verify toggles + download button states.
+
+**Success:**
+- Review Editor reflects toggles and counts for both image + file flows.
+- Download Panel correctly disables/enables based on redaction state.
 
 ---
 
@@ -168,6 +222,9 @@
 Run: `rg -n "bbox|redact" docs/doxx-preventor.md`
 Expected: updated notes
 
+**Success:**
+- Docs describe normalization, consensus flow, and file pipeline clearly.
+
 ---
 
 ### Task 7: Release readiness
@@ -183,6 +240,9 @@ Expected: updated notes
 
 **Step 2: Manual verification**
 - Fresh install: `bun install` → `bun run dev`
+
+**Success:**
+- New contributor can run locally with documented env/config steps.
 
 ---
 
