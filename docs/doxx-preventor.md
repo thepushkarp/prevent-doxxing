@@ -67,6 +67,12 @@ Other considerations:
 3. The user can then select the sensitive information to mask/redact or propose their own changes.
 4. Download the masked/redacted files or images
 
+## Bounding Box Coordinates
+
+- Model outputs can vary, so detections are normalized to a **0–1000** coordinate system using the processed image dimensions.
+- Preview overlays are positioned using the **rendered image rect** (offsets + size) to avoid letterboxing shifts.
+- Redaction converts normalized coords → pixels on the canvas before drawing.
+
 ## Tech Stack
 
 - Next.js

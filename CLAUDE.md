@@ -26,8 +26,14 @@ bun run build
 # Start production server
 bun run start
 
+# Run tests (currently a no-op placeholder)
+bun run test
+
 # Run linter
 bun run lint
+
+# Auto-format
+bun run format
 ```
 
 **Package Manager**: This project uses **Bun** (not npm/yarn/pnpm). Always use `bun` commands.
@@ -38,7 +44,8 @@ bun run lint
 - **React**: 19.2.3
 - **Styling**: Tailwind CSS 4
 - **Fonts**: Geist Sans & Geist Mono (via next/font)
-- **Linting**: ESLint 9 with Next.js config
+- **Linting/Formatting**: Biome (biome.json)
+- **Pre-commit**: Husky + lint-staged
 - **Package Manager**: Bun
 
 ## Project Structure
@@ -111,7 +118,7 @@ public/                     # Static assets
 ┌─────────────┐
 │ GPT-5.2     │ → Single agent with medium reasoning
 │ Detection   │   Returns: [{type, text, bbox, confidence}]
-└──────┬──────┘   bbox: {x, y, width, height} in PIXELS
+└──────┬──────┘   bbox: {x, y, width, height} normalized to 0–1000
        │
        ▼
 ┌─────────────┐
@@ -141,22 +148,21 @@ public/                     # Static assets
 **3. Detection** (using Responses API):
 - Endpoint: `POST /v1/responses` (NOT `/v1/chat/completions`)
 - Model: `gpt-5.2`
-- Reasoning: `medium` (critical for spatial precision)
-- Temperature: `1` (reasonign models use a fixed temperature)
+- Reasoning: `medium` (set via `reasoning: { effort: "medium" }`)
+- Temperature: `1` (explicitly set)
 - Request: `input` array with `input_text` and `input_image` content types
 - Response: `output` array with typed items (extract via `output_text`)
 - Storage: `store: false` for privacy (Responses API stores by default)
 - JSON: `{detections: [{type, text, bbox, confidence}]}`
 
 **4. Coordinate System** ⚠️ CRITICAL:
-- GPT returns **pixel coordinates** based on **original image dimensions**
-- Preview uses **naturalWidth/naturalHeight** (not clientWidth/Height)
-- Conversion: `(pixel / naturalDimension) * 100%` for CSS positioning
-- Redaction uses **pixel coordinates directly** on canvas
+- GPT outputs are normalized to a **0–1000** coordinate system
+- Preview uses the **rendered image rect** (offsets + size) for overlay positioning
+- Redaction converts normalized coords → pixels using canvas dimensions
 
 **5. Redaction**:
 - Canvas size = original image size (`img.width`, `img.height`)
-- Draw black rectangles at bbox coordinates (no conversion needed)
+- Draw black rectangles after converting normalized coords to pixels
 - Export as blob (PNG for transparency, JPEG for photos)
 
 ### Sensitive Information Types
@@ -180,16 +186,15 @@ public/                     # Static assets
 
 **1. Use Responses API with GPT-5.2 + Medium Reasoning**
 - **Problem**: GPT-4o is "trash at bounding boxes" (user feedback)
-- **Solution**: Use Responses API (`/v1/responses`) with `gpt-5.2` and `reasoning_effort: 'medium'`
+- **Solution**: Use Responses API (`/v1/responses`) with `gpt-5.2` and `reasoning: { effort: "medium" }`
 - **Why Responses API?**: Better multimodal support, cleaner input/output structure
 - **Impact**: Significantly more accurate spatial coordinates
-- **Parameters**: `max_completion_tokens` (not `max_tokens`), `store: false` for privacy
+- **Parameters**: `max_output_tokens`, `store: false` for privacy
 
 **2. Coordinate System Gotcha** ⚠️
-- GPT returns **pixel coordinates** based on **original image dimensions**
-- Preview must use `naturalWidth`/`naturalHeight` (not `clientWidth`/`Height`)
-- CSS positioning: convert pixels → percentages using natural dimensions
-- Canvas redaction: use pixel coordinates directly (no conversion)
+- GPT outputs can vary, so detections are normalized to **0–1000**
+- Preview positions overlays using the **rendered image rect** (handles letterboxing)
+- Canvas redaction converts normalized coords → pixels
 
 **3. Client-Side Architecture Benefits**
 - Privacy: No server ever sees user's API key or images
@@ -230,12 +235,12 @@ public/                     # Static assets
 - **Next.js Config**: Minimal configuration in `next.config.mjs` (ready for image/API config)
 - **Tailwind**: v4 with PostCSS integration (no separate config file needed)
 - **Trusted Dependencies**: `sharp` and `unrs-resolver` configured in package.json
-- **ESLint**: Next.js core web vitals rules enabled
+- **Biome**: `biome.json` at repo root for linting/formatting
+- **Husky**: `.husky/pre-commit` runs `lint-staged` (Biome on staged files)
 
 ## Git Workflow
 
 - **Main Branch**: `main` (protected, triggers Vercel deployment)
-- **Current Commit**: `eca2e2b init` (initial setup)
 - Feature branches should be created for new development
 
 ## Documentation
