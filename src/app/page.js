@@ -267,7 +267,9 @@ export default function Home() {
                 <p className="text-zinc-600 dark:text-zinc-400 mt-1">
                   {detections.length === 0
                     ? "No sensitive information detected"
-                    : `Found ${detections.length} potential sensitive ${detections.length === 1 ? "item" : "items"}`}
+                    : `Found ${detections.length} potential sensitive ${
+                        detections.length === 1 ? "item" : "items"
+                      }`}
                 </p>
               </div>
               <button
@@ -299,7 +301,6 @@ export default function Home() {
       <footer className="border-t border-zinc-200 dark:border-zinc-800 mt-16">
         <div className="container mx-auto px-4 py-6 max-w-6xl">
           <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
-            Built for OpenAI Hackathon • Multimodal Intelligence Track •{" "}
             <a
               href="https://github.com/thepushkarp/prevent-doxxing"
               target="_blank"
